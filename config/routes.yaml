@@ -1,0 +1,10 @@
+# See https://symfony.com/doc/current/routing.html
+
+notify:
+    path: /notify
+    controller: App\NotificationPublisher\UserInterface\Http\SendNotificationController
+    methods: [POST]
+
+#index:
+#    path: /
+#    controller: App\Controller\DefaultController::index

@@ -1,0 +1,114 @@
+services:
+  php:
+    build:
+      context: .
+      target: app_php
+      args:
+        SYMFONY_VERSION: ${SYMFONY_VERSION:-}
+        STABILITY: ${STABILITY:-stable}
+    restart: unless-stopped
+    volumes:
+      - php_socket:/var/run/php
+    healthcheck:
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 30s
+    environment:
+      APP_ENV: dev
+      DATABASE_URL: mysql://app:app@database:3306/app?serverVersion=mariadb-10.11.14&charset=utf8mb4
+      MESSENGER_TRANSPORT_DSN: doctrine://default
+      MAILER_DSN: "smtp://u3666228596%40gmail.com:ujmz%20qapw%20oixx%20vokz@smtp.gmail.com:587"
+      GMAIL_FROM: "u3666228596@gmail.com"
+      TWILIO_ACCOUNT_SID: MG60114939c2b642792e21cd0cd0dfee88
+      TWILIO_AUTH_TOKEN: 2908389070b958673ce5b48e85689f0a
+      TWILIO_FROM: "+18777804236"
+      CHANNEL_EMAIL_ENABLED: "1"
+      CHANNEL_SMS_ENABLED: "1"
+      EMAIL_PROVIDERS: "mailtrap,gmail"
+      SMS_PROVIDERS: "twilio,textbelt"
+      NOTIFICATIONS_LIMIT_PER_HOUR: "300"
+      MERCURE_URL: ${CADDY_MERCURE_URL:-http://caddy/.well-known/mercure}
+      MERCURE_PUBLIC_URL: https://${SERVER_NAME:-localhost}/.well-known/mercure
+      MERCURE_JWT_SECRET: ${CADDY_MERCURE_JWT_SECRET:-!ChangeThisMercureHubJWTSecretKey!}
+
+  caddy:
+    build:
+      context: .
+      target: app_caddy
+    depends_on:
+      - php
+    environment:
+      SERVER_NAME: ${SERVER_NAME:-localhost, caddy:80}
+      MERCURE_PUBLISHER_JWT_KEY: ${CADDY_MERCURE_JWT_SECRET:-!ChangeThisMercureHubJWTSecretKey!}
+      MERCURE_SUBSCRIBER_JWT_KEY: ${CADDY_MERCURE_JWT_SECRET:-!ChangeThisMercureHubJWTSecretKey!}
+    restart: unless-stopped
+    volumes:
+      - php_socket:/var/run/php
+      - caddy_data:/data
+      - caddy_config:/config
+    ports:
+      # HTTP
+      - target: 80
+        published: ${HTTP_PORT:-80}
+        protocol: tcp
+      # HTTPS
+      - target: 443
+        published: ${HTTPS_PORT:-443}
+        protocol: tcp
+      # HTTP/3
+      - target: 443
+        published: ${HTTP3_PORT:-443}
+        protocol: udp
+
+# Mercure is installed as a Caddy module, prevent the Flex recipe from installing another service
+###> symfony/mercure-bundle ###
+###< symfony/mercure-bundle ###
+
+  database:
+    image: mariadb:10.11
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: app
+      MYSQL_USER: app
+      MYSQL_PASSWORD: app
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+
+  worker:
+    build:
+      context: .
+      target: app_php_dev
+    depends_on:
+      - php
+      - database
+    environment:
+      APP_ENV: dev
+      DATABASE_URL: mysql://app:app@database:3306/app?serverVersion=mariadb-10.11.14&charset=utf8mb4
+      MESSENGER_TRANSPORT_DSN: doctrine://default
+      MAILER_DSN: "smtp://u3666228596%40gmail.com:ujmz%20qapw%20oixx%20vokz@smtp.gmail.com:587"
+      GMAIL_FROM: "u3666228596@gmail.com"
+      TWILIO_ACCOUNT_SID: MG60114939c2b642792e21cd0cd0dfee88
+      TWILIO_AUTH_TOKEN: 2908389070b958673ce5b48e85689f0a
+      TWILIO_FROM: "+18777804236"
+      CHANNEL_EMAIL_ENABLED: "1"
+      CHANNEL_SMS_ENABLED: "1"
+      EMAIL_PROVIDERS: "mailtrap,gmail"
+      SMS_PROVIDERS: "twilio,textbelt"
+      NOTIFICATIONS_LIMIT_PER_HOUR: "300"
+    command: php -d variables_order=EGPCS bin/console messenger:consume async -vv --time-limit=3600 --memory-limit=128M
+    restart: unless-stopped
+
+###> doctrine/doctrine-bundle ###
+###< doctrine/doctrine-bundle ###
+
+volumes:
+  php_socket:
+  caddy_data:
+  caddy_config:
+  db_data:
+###> symfony/mercure-bundle ###
+###< symfony/mercure-bundle ###
