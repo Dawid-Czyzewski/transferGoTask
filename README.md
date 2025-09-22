@@ -7,7 +7,7 @@
 ### 2) Quick start
 ```bash
 git clone <this_repo_url>
-cd be-evaluation-task-main
+cd transferGoTask
 docker compose up --build
 ```
 This starts `php`, `caddy` (reverse proxy), `database` (MariaDB), and `worker` (Symfony Messenger).
